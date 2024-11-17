@@ -1,0 +1,10 @@
+# VS Code config
+.vscode/
+# Debug info
+*.dSYM/
+# Build files
+*.out
+test
+# Course files
+*.pdf
+*.txt
