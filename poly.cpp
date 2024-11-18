@@ -1,8 +1,6 @@
 #include "poly.h"
 
-polynomial::polynomial() {
-    polyData[0] = 0;
-}
+polynomial::polynomial() : polyData(1, 0) {}
 
 polynomial::polynomial(const polynomial &other) {
     for (int i = 0; i < other.polyData.size(); i++) {
@@ -49,6 +47,7 @@ polynomial operator+(int val, const polynomial &other) {
 
 polynomial polynomial::operator*(const polynomial &other) const {
     polynomial result;
+    result.polyData.resize(polyData.size() + other.polyData.size() - 1, 0);
     // Multiply each term in the first polynomial by each term in the second polynomial
     for (int i = 0; i < polyData.size(); i++) {
         for (int j = 0; j < other.polyData.size(); j++) {

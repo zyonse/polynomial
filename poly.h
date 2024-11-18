@@ -33,8 +33,22 @@ public:
      */
     template <typename Iter>
     polynomial(Iter begin, Iter end) {
-        for (auto it = begin; it != end; it++) {
-            polyData[it->first] = it->second;
+        if (begin == end) {
+            polyData.resize(1, 0); // Handle empty case
+            return;
+        }
+        
+        // Find max power and resize in single pass
+        size_t max_power = 0;
+        for (auto it = begin; it != end; ++it) {
+            max_power = std::max(max_power, it->first);
+        }
+        polyData.resize(max_power + 1, 0);
+        
+        // Populate coefficients
+        while (begin != end) {
+            polyData[begin->first] = begin->second;
+            ++begin;
         }
     }
 
