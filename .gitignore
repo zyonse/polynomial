@@ -3,8 +3,7 @@
 # Debug info
 *.dSYM/
 # Build files
-*.out
-test
+/polynomial
 # Course files
 *.pdf
 *.txt

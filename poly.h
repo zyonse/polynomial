@@ -4,6 +4,9 @@
 #include <vector>
 #include <utility>
 #include <cstddef>
+#include <mutex>
+#include <thread>
+#include <iostream>
 
 using power = size_t;
 using coeff = int;
@@ -29,7 +32,11 @@ public:
      *  The end of the container to copy elements from
      */
     template <typename Iter>
-    polynomial(Iter begin, Iter end);
+    polynomial(Iter begin, Iter end) {
+        for (auto it = begin; it != end; it++) {
+            polyData[it->first] = it->second;
+        }
+    }
 
     /**
      * @brief Construct a new polynomial object from an existing polynomial object
@@ -76,6 +83,13 @@ public:
      * Modulo (%) should support
      * 1. polynomial % polynomial
      */
+    polynomial operator+(const polynomial &other) const;
+    polynomial operator+(int val) const;
+    friend polynomial operator+(int val, const polynomial &other);
+
+    polynomial operator*(const polynomial &other) const;
+    polynomial operator*(int val) const;
+    friend polynomial operator*(int val, const polynomial &other);
     
 
     /**
@@ -107,6 +121,12 @@ public:
      *  A vector of pairs representing the canonical form of the polynomial
      */
     std::vector<std::pair<power, coeff>> canonical_form() const;
+
+private:
+    // Vector containing polynomial data
+    // Index 0 is the coefficient of x^0, index 1 is the coefficient of x^1, etc.
+    std::vector<coeff> polyData;
+
 };
 
 #endif
