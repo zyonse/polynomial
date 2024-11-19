@@ -3,7 +3,8 @@
 polynomial::polynomial() : polyData(1, 0) {}
 
 polynomial::polynomial(const polynomial &other) {
-    for (int i = 0; i < other.polyData.size(); i++) {
+    polyData.resize(other.polyData.size(), 0);
+    for (size_t i = 0; i < other.polyData.size(); i++) {
         polyData[i] = other.polyData[i];
     }
 }
@@ -16,7 +17,9 @@ void polynomial::print() const {
 }
 
 polynomial &polynomial::operator=(const polynomial &other) {
-    for (int i = 0; i < other.polyData.size(); i++) {
+    size_t size = other.polyData.size();
+    polyData.resize(size, 0);
+    for (int i = 0; i < size; i++) {
         polyData[i] = other.polyData[i];
     }
     return *this;
@@ -47,10 +50,12 @@ polynomial operator+(int val, const polynomial &other) {
 
 polynomial polynomial::operator*(const polynomial &other) const {
     polynomial result;
-    result.polyData.resize(polyData.size() + other.polyData.size() - 1, 0);
+    const size_t len1 = polyData.size();
+    const size_t len2 = other.polyData.size();
+    result.polyData.resize(len1 + len2 - 1, 0);
     // Multiply each term in the first polynomial by each term in the second polynomial
-    for (int i = 0; i < polyData.size(); i++) {
-        for (int j = 0; j < other.polyData.size(); j++) {
+    for (int i = 0; i < len1; i++) {
+        for (int j = 0; j < len2; j++) {
             result.polyData[i + j] += polyData[i] * other.polyData[j];
         }
     }
@@ -75,7 +80,42 @@ polynomial operator*(int val, const polynomial &other) {
     return result;
 }
 
-size_t polynomial::find_degree_of() {
+polynomial polynomial::operator-(const polynomial &other) const {
+    polynomial result;
+    const size_t max_size = std::max(polyData.size(), other.polyData.size());
+    result.polyData.resize(max_size, 0);
+
+    // Subtract terms
+    for (size_t i = 0; i < max_size; ++i) {
+        const coeff term1 = i < polyData.size() ? polyData[i] : 0;
+        const coeff term2 = i < other.polyData.size() ? other.polyData[i] : 0;
+        result.polyData[i] = term1 - term2;
+    }
+    return result;
+}
+
+polynomial polynomial::operator%(const polynomial &divisor) const {
+    polynomial dividend = *this;
+    polynomial remainder = *this;
+    int divisor_degree = divisor.find_degree_of();
+    int dividend_degree = dividend.find_degree_of();
+
+    while (dividend_degree >= divisor_degree) {
+        int degree_diff = dividend_degree - divisor_degree;
+        int coeff = dividend.polyData[dividend_degree] / divisor.polyData[divisor_degree];
+        polynomial temp;
+        temp.polyData.resize(degree_diff + 1, 0);
+        temp.polyData[degree_diff] = coeff;
+
+        remainder = remainder - (temp * divisor);
+        dividend = remainder;
+        dividend_degree = dividend.find_degree_of();
+    }
+
+    return remainder;
+}
+
+size_t polynomial::find_degree_of() const {
     for (int i = polyData.size() - 1; i >= 0; i--) {
         if (polyData[i] != 0) {
             return i;
@@ -86,10 +126,28 @@ size_t polynomial::find_degree_of() {
 
 std::vector<std::pair<power, coeff>> polynomial::canonical_form() const {
     std::vector<std::pair<power, coeff>> canonical;
+    
+    // Find the actual degree (highest non-zero coefficient)
+    int actual_degree = -1;
     for (int i = polyData.size() - 1; i >= 0; i--) {
         if (polyData[i] != 0) {
-            canonical.push_back(std::make_pair(i, polyData[i]));
+            actual_degree = i;
+            break;
         }
     }
+
+    // If polynomial is zero
+    if (actual_degree == -1) {
+        return {std::make_pair(0, 0)};
+    }
+
+    // Build canonical form from highest to lowest degree
+    canonical.reserve(actual_degree + 1);
+    for (int i = actual_degree; i >= 0; i--) {
+        if (polyData[i] != 0) {
+            canonical.emplace_back(i, polyData[i]);
+        }
+    }
+    
     return canonical;
 }
