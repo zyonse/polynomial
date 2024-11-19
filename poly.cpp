@@ -3,8 +3,9 @@
 polynomial::polynomial() : polyData(1, 0) {}
 
 polynomial::polynomial(const polynomial &other) {
-    polyData.resize(other.polyData.size(), 0);
-    for (size_t i = 0; i < other.polyData.size(); i++) {
+    size_t size = other.polyData.size();
+    polyData.resize(size, 0);
+    for (size_t i = 0; i < size; i++) {
         polyData[i] = other.polyData[i];
     }
 }
