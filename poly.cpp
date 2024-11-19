@@ -126,28 +126,16 @@ size_t polynomial::find_degree_of() const {
 
 std::vector<std::pair<power, coeff>> polynomial::canonical_form() const {
     std::vector<std::pair<power, coeff>> canonical;
-    
-    // Find the actual degree (highest non-zero coefficient)
-    int actual_degree = -1;
-    for (int i = polyData.size() - 1; i >= 0; i--) {
-        if (polyData[i] != 0) {
-            actual_degree = i;
-            break;
-        }
-    }
-
-    // If polynomial is zero
-    if (actual_degree == -1) {
-        return {std::make_pair(0, 0)};
-    }
-
-    // Build canonical form from highest to lowest degree
-    canonical.reserve(actual_degree + 1);
-    for (int i = actual_degree; i >= 0; i--) {
+    canonical.reserve(polyData.size()); // Reserve space to avoid multiple allocations
+    bool is_zero = true;
+    for (int i = polyData.size() - 1; i >= 0; --i) {
         if (polyData[i] != 0) {
             canonical.emplace_back(i, polyData[i]);
+            is_zero = false;
         }
     }
-    
+    if (is_zero) {
+        canonical.emplace_back(0, 0);
+    }
     return canonical;
 }
