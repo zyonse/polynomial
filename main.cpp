@@ -105,6 +105,26 @@ bool test_file() {
     return 0;
 }
 
+// Function to test multiplication of sparse polynomials
+void test_sparse_polynomials() {
+    std::vector<std::pair<power, coeff>> sparse_poly1 = {
+        {1000, 5}, {5000, 10}, {100000, 3}
+    };
+    std::vector<std::pair<power, coeff>> sparse_poly2 = {
+        {2000, 2}, {5000, 4}, {150000, 6}
+    };
+
+    polynomial sp1(sparse_poly1.begin(), sparse_poly1.end());
+    polynomial sp2(sparse_poly2.begin(), sparse_poly2.end());
+
+    auto start_sparse_mul = std::chrono::high_resolution_clock::now();
+    polynomial sparse_product = sp1 * sp2;
+    auto end_sparse_mul = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> duration_sparse_mul = end_sparse_mul - start_sparse_mul;
+
+    std::cout << "Sparse Multiplication time: " << duration_sparse_mul.count() << " seconds" << std::endl;
+}
+
 int main()
 {
     /** We're doing (x+1)^2, so solution is x^2 + 2x + 1*/
@@ -134,6 +154,9 @@ int main()
         std::cout << "Failed simple_poly.txt test" << std::endl;
         return 1;
     }
+
+    // Call the sparse polynomial test function
+    test_sparse_polynomials();
 
     return 0;
 }
