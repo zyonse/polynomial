@@ -27,6 +27,7 @@ polynomial &polynomial::operator=(const polynomial &other) {
 
 polynomial polynomial::operator+(const polynomial &other) const {
     polynomial result;
+    result.polyData.resize(std::max(polyData.size(), other.polyData.size()), 0);
     // Loop through the larger polynomial
     for (int i = 0; i < std::max(polyData.size(), other.polyData.size()); i++) {
         result.polyData[i] = polyData[i] + other.polyData[i];
