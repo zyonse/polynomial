@@ -7,6 +7,10 @@
 #include <mutex>
 #include <thread>
 #include <iostream>
+#include <complex>
+#include <cmath>
+#include <unordered_map>
+#include <algorithm>
 
 using power = size_t;
 using coeff = int;
@@ -34,16 +38,9 @@ public:
     template <typename Iter>
     polynomial(Iter begin, Iter end) {
         if (begin == end) {
-            polyData.resize(1, 0); // Handle empty case
+            polyData[0] = 0; // Handle empty case
             return;
         }
-        
-        // Find max power and resize in single pass
-        size_t max_power = 0;
-        for (auto it = begin; it != end; ++it) {
-            max_power = std::max(max_power, it->first);
-        }
-        polyData.resize(max_power + 1, 0);
         
         // Populate coefficients
         while (begin != end) {
@@ -101,6 +98,11 @@ public:
     polynomial operator+(int val) const;
     friend polynomial operator+(int val, const polynomial &other);
 
+    /**
+     * @brief Uses modified FFT approach to speed up multiplication
+     * 
+     * https://www.geeksforgeeks.org/fast-fourier-transformation-poynomial-multiplication/
+    */
     polynomial operator*(const polynomial &other) const;
     polynomial operator*(int val) const;
     friend polynomial operator*(int val, const polynomial &other);
@@ -141,10 +143,16 @@ public:
     std::vector<std::pair<power, coeff>> canonical_form() const;
 
 private:
-    // Vector containing polynomial data
-    // Index 0 is the coefficient of x^0, index 1 is the coefficient of x^1, etc.
-    std::vector<coeff> polyData;
+    std::unordered_map<power, coeff> polyData;
 
+    // Helper function for FFT
+    void fft(std::vector<std::complex<double>> &a, bool invert, int depth = 0) const;
+    // Add helper function declaration
+    static std::vector<std::complex<double>> to_fft_format(const std::unordered_map<power, coeff>& data, size_t size);
+    
+    mutable std::atomic<int> active_threads{0};
+    // Detect optimal number of threads to use
+    int max_threads = std::thread::hardware_concurrency();
 };
 
 #endif
