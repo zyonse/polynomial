@@ -3,6 +3,7 @@
 #include <optional>
 #include <vector>
 #include <fstream>
+#include <sstream>
 
 #include "poly.h"
 

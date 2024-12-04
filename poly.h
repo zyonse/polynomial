@@ -4,11 +4,7 @@
 #include <vector>
 #include <utility>
 #include <cstddef>
-#include <mutex>
-#include <thread>
 #include <iostream>
-#include <complex>
-#include <cmath>
 #include <unordered_map>
 #include <algorithm>
 
@@ -98,11 +94,6 @@ public:
     polynomial operator+(int val) const;
     friend polynomial operator+(int val, const polynomial &other);
 
-    /**
-     * @brief Uses modified FFT approach to speed up multiplication
-     * 
-     * https://www.geeksforgeeks.org/fast-fourier-transformation-poynomial-multiplication/
-    */
     polynomial operator*(const polynomial &other) const;
     polynomial operator*(int val) const;
     friend polynomial operator*(int val, const polynomial &other);
@@ -144,15 +135,6 @@ public:
 
 private:
     std::unordered_map<power, coeff> polyData;
-
-    // Helper function for FFT
-    void fft(std::vector<std::complex<double>> &a, bool invert, int depth = 0) const;
-    // Add helper function declaration
-    static std::vector<std::complex<double>> to_fft_format(const std::unordered_map<power, coeff>& data, size_t size);
-    
-    mutable std::atomic<int> active_threads{0};
-    // Detect optimal number of threads to use
-    int max_threads = std::thread::hardware_concurrency();
 };
 
 #endif
