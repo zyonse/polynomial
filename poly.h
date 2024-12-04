@@ -7,6 +7,7 @@
 #include <iostream>
 #include <unordered_map>
 #include <algorithm>
+#include <complex>
 
 using power = size_t;
 using coeff = int;
@@ -135,6 +136,12 @@ public:
 
 private:
     std::unordered_map<power, coeff> polyData;
+    
+    // FFT helper functions
+    // https://www.geeksforgeeks.org/fast-fourier-transformation-poynomial-multiplication/
+    static void fft(std::vector<std::complex<double>>& a, bool inverse = false);
+    polynomial multiply_fft(const polynomial& other) const;
+    static size_t next_power_of_two(size_t n);
 };
 
 #endif

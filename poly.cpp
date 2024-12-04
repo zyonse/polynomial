@@ -1,4 +1,6 @@
 #include "poly.h"
+#include <complex>
+#include <cmath>
 
 polynomial::polynomial() {
     polyData[0] = 0;
@@ -48,6 +50,19 @@ polynomial operator+(int val, const polynomial &other) {
 }
 
 polynomial polynomial::operator*(const polynomial &other) const {
+    size_t deg1 = find_degree_of();
+    size_t deg2 = other.find_degree_of();
+    
+    // Check sparsity: if number of terms is small relative to degree, use standard multiplication
+    double sparsity1 = polyData.size() / static_cast<double>(deg1 + 1);
+    double sparsity2 = other.polyData.size() / static_cast<double>(deg2 + 1);
+    
+    // Use FFT only for dense polynomials (>10% non-zero terms) and large degree
+    if (deg1 > 1000 && deg2 > 1000 && sparsity1 > 0.1 && sparsity2 > 0.1) {
+        return multiply_fft(other);
+    }
+
+    // Use standard multiplication
     polynomial result;
     for (const auto& term1 : polyData) {
         for (const auto& term2 : other.polyData) {
@@ -186,4 +201,76 @@ std::vector<std::pair<power, coeff>> polynomial::canonical_form() const {
     }
     
     return canonical;
+}
+
+size_t polynomial::next_power_of_two(size_t n) {
+    return n > 1 ? 1 << (size_t)std::ceil(std::log2(n)) : 1;
+}
+
+void polynomial::fft(std::vector<std::complex<double>>& a, bool inverse) {
+    size_t n = a.size();
+    if (n == 1) return;
+
+    std::vector<std::complex<double>> even(n/2), odd(n/2);
+    for (size_t i = 0; i < n/2; i++) {
+        even[i] = a[2*i];
+        odd[i] = a[2*i+1];
+    }
+
+    fft(even, inverse);
+    fft(odd, inverse);
+
+    double angle = 2 * M_PI / n * (inverse ? -1 : 1);
+    std::complex<double> w(1), wn(std::cos(angle), std::sin(angle));
+    
+    for (size_t i = 0; i < n/2; i++) {
+        a[i] = even[i] + w * odd[i];
+        a[i + n/2] = even[i] - w * odd[i];
+        if (inverse) {
+            a[i] /= 2;
+            a[i + n/2] /= 2;
+        }
+        w *= wn;
+    }
+}
+
+polynomial polynomial::multiply_fft(const polynomial& other) const {
+    size_t deg1 = find_degree_of();
+    size_t deg2 = other.find_degree_of();
+    size_t n = next_power_of_two(deg1 + deg2 + 1);
+
+    std::vector<std::complex<double>> fa(n, 0), fb(n, 0);
+
+    // Fill coefficients
+    for (const auto& [power, coef] : polyData) {
+        fa[power] = static_cast<double>(coef);
+    }
+    for (const auto& [power, coef] : other.polyData) {
+        fb[power] = static_cast<double>(coef);
+    }
+
+    // Forward FFT
+    fft(fa);
+    fft(fb);
+
+    // Pointwise multiplication
+    for (size_t i = 0; i < n; i++) {
+        fa[i] *= fb[i];
+    }
+
+    // Inverse FFT
+    fft(fa, true);
+
+    polynomial result;
+    for (size_t i = 0; i <= deg1 + deg2; i++) {
+        int rounded = static_cast<int>(std::round(fa[i].real()));
+        if (std::abs(rounded) > 0) {
+            result.polyData[i] = rounded;
+        }
+    }
+
+    if (result.polyData.empty()) {
+        result.polyData[0] = 0;
+    }
+    return result;
 }
