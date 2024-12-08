@@ -129,11 +129,12 @@ void test_sparse_polynomials() {
 std::optional<double> test_polynomial_modulo(polynomial& dividend, 
                                            polynomial& divisor,
                                            std::vector<std::pair<power, coeff>> expected_result) {
-    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+    auto begin = std::chrono::high_resolution_clock::now();
     
     polynomial remainder = dividend % divisor;
     
-    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> duration = end - begin;
     
     std::cout << "Remainder: ";
     remainder.print();
@@ -142,7 +143,7 @@ std::optional<double> test_polynomial_modulo(polynomial& dividend,
         return std::nullopt;
     }
     
-    return std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+    return duration.count();
 }
 
 int main()
@@ -180,44 +181,43 @@ int main()
     std::optional<double> modulo_result = test_polynomial_modulo(p1, p2, modulo_expected);
     
     if (modulo_result.has_value()) {
-        std::cout << "Passed modulo test, took " << modulo_result.value() << " ms" << std::endl;
+        std::cout << "Passed modulo test, took " << modulo_result.value() << " seconds" << std::endl;
     } else {
         std::cout << "Failed modulo test" << std::endl;
     }
 
-    // Test polynomial modulo with complex polynomials
-    // Testing (2x^3 + 3x^2 + 1) % (x^2 + 1)
+    // Test polynomial modulo with larger polynomials
     std::vector<std::pair<power, coeff>> dividend_input = {
-        {9, 1},    // \( x^9 \)
-        {8, -2},   // \( -2x^8 \)
-        {7, 3},    // \( 3x^7 \)
-        {6, -4},   // \( -4x^6 \)
-        {5, 5},    // \( 5x^5 \)
-        {4, -6},   // \( -6x^4 \)
-        {3, 7},    // \( 7x^3 \)
-        {2, -8},   // \( -8x^2 \)
-        {1, 9},    // \( 9x \)
-        {0, -10}   // \( -10 \)
+        {9, 1},    // x^9
+        {8, -2},   // -2x^8
+        {7, 3},    // 3x^7
+        {6, -4},   // -4x^6
+        {5, 5},    // 5x^5
+        {4, -6},   // -6x^4
+        {3, 7},    // 7x^3
+        {2, -8},   // -8x^2
+        {1, 9},    // 9x
+        {0, -10}   // -10
     };
     std::vector<std::pair<power, coeff>> divisor_input = {
-        {3, 1},    // \( x^3 \)
-        {2, -1},   // \( -x^2 \)
-        {0, 1}     // \( 1 \)
+        {3, 1},    // x^3
+        {2, -1},   // -x^2
+        {0, 1}     // 1
     };
-    std::vector<std::pair<power, coeff>> modulo_expected_complex = {
-        {2, -6},   // \( -6x^2 \)
-        {1, 14},   // \( 14x \)
-        {0, -15}   // \( -15 \)
+    std::vector<std::pair<power, coeff>> modulo_expected_large = {
+        {2, -6},   // -6x^2
+        {1, 14},   // 14x
+        {0, -15}   // -15
     };
-    polynomial complex_dividend(dividend_input.begin(), dividend_input.end());
-    polynomial complex_divisor(divisor_input.begin(), divisor_input.end());
+    polynomial large_dividend(dividend_input.begin(), dividend_input.end());
+    polynomial large_divisor(divisor_input.begin(), divisor_input.end());
     
-    std::optional<double> modulo_result_complex = test_polynomial_modulo(complex_dividend, complex_divisor, modulo_expected_complex);
+    std::optional<double> modulo_result_large = test_polynomial_modulo(large_dividend, large_divisor, modulo_expected_large);
     
-    if (modulo_result_complex.has_value()) {
-        std::cout << "Passed complex modulo test, took " << modulo_result_complex.value() << " ms" << std::endl;
+    if (modulo_result_large.has_value()) {
+        std::cout << "Passed large polynomial modulo test, took " << modulo_result_large.value() << " seconds" << std::endl;
     } else {
-        std::cout << "Failed complex modulo test" << std::endl;
+        std::cout << "Failed large polynomial modulo test" << std::endl;
     }
 
     // Call the sparse polynomial test function
