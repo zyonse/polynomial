@@ -123,38 +123,30 @@ polynomial polynomial::operator%(const polynomial &divisor) const {
     }
 
     polynomial remainder = *this;
-    size_t divisor_degree = divisor.find_degree_of();
+    const size_t divisor_degree = divisor.find_degree_of();
+    const auto div_lead_term = divisor.polyData.find(divisor_degree);
+    if (div_lead_term == divisor.polyData.end()) return remainder;
+    
+    const coeff div_lead_coeff = div_lead_term->second;
+    const double inv_lead_coeff = 1.0 / div_lead_coeff; // Pre-calculate inverse
 
     while (!remainder.polyData.empty()) {
-        size_t remainder_degree = remainder.find_degree_of();
-        if (remainder_degree < divisor_degree) {
-            break;
-        }
+        const size_t remainder_degree = remainder.find_degree_of();
+        if (remainder_degree < divisor_degree) break;
 
-        // Find the leading terms
-        auto div_lead_term = divisor.polyData.find(divisor_degree);
-        auto rem_lead_term = remainder.polyData.find(remainder_degree);
-        if (div_lead_term == divisor.polyData.end() || rem_lead_term == remainder.polyData.end()) {
-            break;
-        }
+        const auto rem_lead_term = remainder.polyData.find(remainder_degree);
+        if (rem_lead_term == remainder.polyData.end()) break;
 
-        // Calculate the quotient term
-        size_t new_power = remainder_degree - divisor_degree;
-        coeff new_coeff = rem_lead_term->second / div_lead_term->second;
+        // Calculate quotient term
+        const size_t term_power = remainder_degree - divisor_degree;
+        const coeff term_coeff = static_cast<coeff>(rem_lead_term->second * inv_lead_coeff);
 
-        // Create temporary polynomial for subtraction
-        polynomial temp;
-        temp.polyData[new_power] = new_coeff;
-
-        // Subtract
-        remainder = remainder - (temp * divisor);
-
-        // Remove zero terms
-        for (auto it = remainder.polyData.begin(); it != remainder.polyData.end();) {
-            if (it->second == 0) {
-                it = remainder.polyData.erase(it);
-            } else {
-                ++it;
+        // Subtract divisor * term directly from remainder
+        for (const auto& [div_power, div_coeff] : divisor.polyData) {
+            const power target_power = div_power + term_power;
+            remainder.polyData[target_power] -= div_coeff * term_coeff;
+            if (remainder.polyData[target_power] == 0) {
+                remainder.polyData.erase(target_power);
             }
         }
     }
