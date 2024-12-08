@@ -3,11 +3,13 @@
 
 #include <vector>
 #include <utility>
-#include <cstddef>
 #include <iostream>
 #include <unordered_map>
 #include <algorithm>
 #include <complex>
+#include <thread>
+#include <mutex>
+#include <cmath>
 
 using power = size_t;
 using coeff = int;
@@ -38,11 +40,35 @@ public:
             polyData[0] = 0; // Handle empty case
             return;
         }
-        
-        // Populate coefficients
+        size_t total_elements = std::distance(begin, end);
+        if (total_elements > 1000) { // Threshold for multithreading
+            size_t num_threads = std::thread::hardware_concurrency();
+            size_t chunk_size = total_elements / num_threads;
+            std::vector<std::thread> threads;
+            Iter it = begin;
+            for (size_t i = 0; i < num_threads; ++i) {
+                Iter chunk_start = it;
+                Iter chunk_end = chunk_start;
+                size_t steps = (i == num_threads - 1) ? total_elements - chunk_size * i : chunk_size;
+                for (size_t j = 0; j < steps && chunk_end != end; ++j) {
+                    ++chunk_end;
+                }
+                threads.emplace_back([this, chunk_start, chunk_end]() {
+                    for (auto it = chunk_start; it != chunk_end; ++it) {
+                        std::lock_guard<std::mutex> lock(this->mutex_);
+                        this->polyData[it->first] = it->second;
+                    }
+                });
+                it = chunk_end;
+            }
+            for (auto& thread : threads) {
+                thread.join();
+            }
+        } else {
         while (begin != end) {
             polyData[begin->first] = begin->second;
             ++begin;
+            }
         }
     }
 
@@ -136,11 +162,11 @@ public:
 
 private:
     std::unordered_map<power, coeff> polyData;
+    mutable std::mutex mutex_;
     
     // FFT helper functions
-    // https://www.geeksforgeeks.org/fast-fourier-transformation-poynomial-multiplication/
-    static void fft(std::vector<std::complex<double>>& a, bool inverse = false);
-    polynomial multiply_fft(const polynomial& other) const;
+    static void fft(std::vector<std::complex<double>> &a, bool inverse = false);
+    polynomial multiply_fft(const polynomial &other) const;
     static size_t next_power_of_two(size_t n);
 };
 

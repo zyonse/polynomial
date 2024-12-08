@@ -1,6 +1,4 @@
 #include "poly.h"
-#include <complex>
-#include <cmath>
 
 polynomial::polynomial() {
     polyData[0] = 0;
@@ -171,35 +169,76 @@ size_t polynomial::find_degree_of() const {
     if (polyData.empty() || (polyData.size() == 1 && polyData.count(0) && polyData.at(0) == 0)) {
         return 0;
     }
-    size_t max_degree = 0;
-    for (const auto& term : polyData) {
-        max_degree = std::max(max_degree, term.first);
+    size_t num_threads = std::min(polyData.size(), static_cast<size_t>(std::thread::hardware_concurrency()));
+    std::vector<std::thread> threads;
+    std::vector<size_t> local_max(num_threads, 0);
+    auto it = polyData.begin();
+    size_t chunk_size = polyData.size() / num_threads;
+
+    for (size_t i = 0; i < num_threads; ++i) {
+        auto chunk_start = it;
+        auto chunk_end = chunk_start;
+        size_t steps = (i == num_threads - 1) ? polyData.size() - chunk_size * i : chunk_size;
+        for (size_t j = 0; j < steps && chunk_end != polyData.end(); ++j) {
+            ++chunk_end;
+        }
+        threads.emplace_back([chunk_start, chunk_end, &local_max, i]() {
+            size_t max_degree = 0;
+            for (auto iter = chunk_start; iter != chunk_end; ++iter) {
+                max_degree = std::max(max_degree, iter->first);
+            }
+            local_max[i] = max_degree;
+        });
+        it = chunk_end;
     }
-    return max_degree;
+    for (auto& thread : threads) {
+        thread.join();
+    }
+    return *std::max_element(local_max.begin(), local_max.end());
 }
 
 std::vector<std::pair<power, coeff>> polynomial::canonical_form() const {
-    // Special case for zero polynomial
     if (polyData.empty() || 
         (polyData.size() == 1 && polyData.find(0) != polyData.end() && polyData.at(0) == 0)) {
         return {{0, 0}};  // Return {{0,0}} directly
     }
     
     std::vector<std::pair<power, coeff>> canonical;
-    for (const auto& term : polyData) {
-        if (term.second != 0) {
-            canonical.emplace_back(term.first, term.second);
+    canonical.reserve(polyData.size());
+    size_t num_threads = std::min(polyData.size(), static_cast<size_t>(std::thread::hardware_concurrency()));
+    std::vector<std::vector<std::pair<power, coeff>>> local_vectors(num_threads);
+    std::vector<std::thread> threads;
+    auto it = polyData.begin();
+    size_t chunk_size = polyData.size() / num_threads;
+
+    for (size_t i = 0; i < num_threads; ++i) {
+        auto chunk_start = it;
+        auto chunk_end = chunk_start;
+        size_t steps = (i == num_threads - 1) ? polyData.size() - chunk_size * i : chunk_size;
+        for (size_t j = 0; j < steps && chunk_end != polyData.end(); ++j) {
+            ++chunk_end;
         }
+        threads.emplace_back([chunk_start, chunk_end, &local_vectors, i]() {
+            for (auto iter = chunk_start; iter != chunk_end; ++iter) {
+                if (iter->second != 0) {
+                    local_vectors[i].emplace_back(iter->first, iter->second);
+                }
+            }
+        });
+        it = chunk_end;
     }
-    
-    std::sort(canonical.begin(), canonical.end(), 
-        [](const auto& a, const auto& b) { return a.first > b.first; });
-    
-    // If after filtering we have no terms, it's a zero polynomial
+    for (auto& thread : threads) {
+        thread.join();
+    }
+    for (const auto& vec : local_vectors) {
+        canonical.insert(canonical.end(), vec.begin(), vec.end());
+    }
+    std::sort(canonical.begin(), canonical.end(),
+        [](const auto& a, const auto& b) { return a.first > b.first; }
+    );
     if (canonical.empty()) {
         return {{0, 0}};
     }
-    
     return canonical;
 }
 
@@ -211,24 +250,30 @@ void polynomial::fft(std::vector<std::complex<double>>& a, bool inverse) {
     size_t n = a.size();
     if (n == 1) return;
 
-    std::vector<std::complex<double>> even(n/2), odd(n/2);
-    for (size_t i = 0; i < n/2; i++) {
-        even[i] = a[2*i];
-        odd[i] = a[2*i+1];
+    std::vector<std::complex<double>> even(n / 2), odd(n / 2);
+    for (size_t i = 0; i < n / 2; i++) {
+        even[i] = a[2 * i];
+        odd[i] = a[2 * i + 1];
     }
 
-    fft(even, inverse);
-    fft(odd, inverse);
+    if (n > 2048) { // Threshold for multithreading
+        std::thread thread_even([&]() { fft(even, inverse); });
+        fft(odd, inverse);
+        thread_even.join();
+    } else {
+        fft(even, inverse);
+        fft(odd, inverse);
+    }
 
     double angle = 2 * M_PI / n * (inverse ? -1 : 1);
     std::complex<double> w(1), wn(std::cos(angle), std::sin(angle));
-    
-    for (size_t i = 0; i < n/2; i++) {
+
+    for (size_t i = 0; i < n / 2; i++) {
         a[i] = even[i] + w * odd[i];
-        a[i + n/2] = even[i] - w * odd[i];
+        a[i + n / 2] = even[i] - w * odd[i];
         if (inverse) {
             a[i] /= 2;
-            a[i + n/2] /= 2;
+            a[i + n / 2] /= 2;
         }
         w *= wn;
     }
